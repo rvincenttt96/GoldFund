@@ -136,6 +136,7 @@
           <section class="glass card">
             <h3>خاموش / روشن ترید واقعی</h3>
             <p>فقط ورکر لایو. کاغذی دست نمی‌خورد.</p>
+            <p>وضعیت الان: ${data.live_enabled ? "روشن" : "خاموش"}</p>
             <button id="toggle">${data.live_enabled ? "خاموش کردن لایو" : "روشن کردن لایو"}</button>
           </section>
           <section class="glass card">
@@ -153,7 +154,7 @@
           </section>
           <section class="glass card wide">
             <h3>سیگنال‌های فعال</h3>
-            ${(data.signals||[]).length === 0 ? "<p>سیگنال فعالی نیست.</p>" : `<table><thead><tr><th>نوع</th><th>مسیر</th><th>لبه</th><th>لایو</th><th>زمان</th></tr></thead><tbody>
+            ${(data.signals||[]).length === 0 ? "<p>سیگنال فعالی برای این جلسه نیست. لایو از صفر شروع می‌شود و Rotationهای قدیمی اجرا نمی‌شوند.</p>" : `<table><thead><tr><th>نوع</th><th>مسیر</th><th>لبه</th><th>وضعیت</th><th>زمان</th></tr></thead><tbody>
               ${data.signals.map(s => `<tr><td>${s.type}</td><td>${s.source && s.target ? s.source+" → "+s.target : "—"}</td><td>${s.edge_pp == null ? "—" : fa.format(s.edge_pp)}٪</td><td>${s.pending_live ? "منتظر اجرا" : "—"}</td><td>${when(s.generated_at)}</td></tr>`).join("")}
             </tbody></table>`}
           </section>
@@ -186,21 +187,29 @@
       document.getElementById("t2").onclick = () => { tab = "history"; render(); };
       document.getElementById("out").onclick = async () => { await api("/api/logout", { method: "POST" }); authed = false; renderLogin(); };
       if (tab === "overview") {
-        document.getElementById("saveCap").onclick = async () => {
-          await api("/api/capital", { method: "POST", body: JSON.stringify({ max_toman: Number(document.getElementById("cap").value) }) });
-          await load(); render();
+        const run = async (fn) => {
+          try {
+            await fn();
+            await load();
+            render();
+          } catch (ex) {
+            alert(ex.message || "خطا");
+          }
         };
-        document.getElementById("toggle").onclick = async () => {
-          await api("/api/live/enabled", { method: "POST", body: JSON.stringify({ enabled: !data.live_enabled }) });
-          await load(); render();
-        };
-        document.getElementById("saveBr").onclick = async () => {
+        document.getElementById("saveCap").onclick = () => run(async () => {
+          const value = Number(document.getElementById("cap").value);
+          await api("/api/capital", { method: "POST", body: JSON.stringify({ max_toman: value }) });
+        });
+        document.getElementById("toggle").onclick = () => run(async () => {
+          const enabled = !data.live_enabled;
+          await api("/api/live/enabled", { method: "POST", body: JSON.stringify({ enabled }) });
+        });
+        document.getElementById("saveBr").onclick = () => run(async () => {
           const body = { national_id: document.getElementById("nid").value };
           const pw = document.getElementById("npw").value;
           if (pw) body.password = pw;
           await api("/api/broker", { method: "POST", body: JSON.stringify(body) });
-          await load(); render();
-        };
+        });
       }
     }
 

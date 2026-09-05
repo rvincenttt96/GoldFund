@@ -251,16 +251,27 @@ def active_signals(session: Session) -> list[dict[str, Any]]:
         if i is not None
     }
     today = datetime.now(TEHRAN).date()
+    if latest is None:
+        return []
     rows = session.execute(
         select(Signal)
-        .where(Signal.strategy_id == STRATEGY_A)
+        .where(
+            Signal.strategy_id == STRATEGY_A,
+            Signal.cycle_id == latest.id,
+        )
         .order_by(Signal.id.desc())
-        .limit(20)
     ).scalars().all()
     out = []
     for sig in rows:
         generated = sig.generated_at.astimezone(TEHRAN) if sig.generated_at else None
         same_day = generated.date() == today if generated else False
+        pending = (
+            sig.signal_type == "ROTATE_TO"
+            and int(sig.id) not in claimed
+            and same_day
+        )
+        if not pending:
+            continue
         out.append(
             {
                 "id": int(sig.id),
@@ -269,14 +280,8 @@ def active_signals(session: Session) -> list[dict[str, Any]]:
                 "target": symbols.get(int(sig.target_fund_id)) if sig.target_fund_id else None,
                 "edge_pp": float(_dec(sig.net_executable_edge) * 100) if sig.net_executable_edge is not None else None,
                 "generated_at": sig.generated_at.isoformat() if sig.generated_at else None,
-                "pending_live": (
-                    sig.signal_type == "ROTATE_TO"
-                    and int(sig.id) not in claimed
-                    and same_day
-                    and latest is not None
-                    and int(sig.cycle_id) == int(latest.id)
-                ),
-                "same_session": same_day,
+                "pending_live": True,
+                "same_session": True,
             }
         )
     return out
