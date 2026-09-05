@@ -4,7 +4,7 @@ anchor_symbol: "عیار"
 
 capital:
   # Hard cap on NEW cash deployed (bootstrap). Rotations keep profits invested.
-  max_toman: 50000000
+  max_toman: 5000000
   toman_to_rial: 10
 
 execution:
