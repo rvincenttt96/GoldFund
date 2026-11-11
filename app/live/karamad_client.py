@@ -277,7 +277,13 @@ class KaramadClient:
             if self.is_logged_in():
                 logger.info("Karamad session still valid, skip login form")
                 return True
-            username_field = wait_visible(driver, (By.CSS_SELECTOR, "app-login form input"))
+            try:
+                username_field = wait_visible(driver, (By.CSS_SELECTOR, "app-login form input"), timeout=8)
+            except TimeoutException:
+                if self.is_logged_in():
+                    logger.info("Karamad redirected to dashboard, skip login form")
+                    return True
+                username_field = wait_visible(driver, (By.CSS_SELECTOR, "app-login form input"))
             clear_field(username_field)
             human_type(username_field, self.username)
             password_field = wait_visible(driver, (By.CSS_SELECTOR, "app-login lib-virtual-keyboard input"))
@@ -660,6 +666,83 @@ class KaramadClient:
         except Exception:
             logger.exception("debug artifact failed")
 
+
+    def cancel_open_orders(self, symbol: str | None = None) -> int:
+        """Cancel visible open orders. Returns how many confirm clicks we attempted."""
+        driver = self.driver
+        self.ensure_dashboard()
+        cancelled = 0
+        try:
+            tab = None
+            for xpath in (
+                "//a[contains(., 'سفارشات') and not(contains(., 'نماد')) and not(contains(., 'پیش'))]",
+                "//a[contains(., 'سفارشات')]",
+            ):
+                els = driver.find_elements(By.XPATH, xpath)
+                if els:
+                    tab = els[0]
+                    break
+            if tab is not None:
+                driver.execute_script("arguments[0].click();", tab)
+                time.sleep(1.2)
+            if symbol:
+                try:
+                    box = driver.find_element(By.CSS_SELECTOR, "lib-open-orders input#ff")
+                    set_native_value(driver, box, symbol)
+                    box.send_keys(Keys.ENTER)
+                    time.sleep(0.8)
+                except Exception:
+                    logger.exception("open-order symbol filter failed")
+            try:
+                tab_sym = driver.find_elements(By.XPATH, "//a[contains(., 'سفارشات نماد')]")
+                if tab_sym:
+                    driver.execute_script("arguments[0].click();", tab_sym[0])
+                    time.sleep(1.0)
+            except Exception:
+                pass
+            header = driver.find_elements(
+                By.CSS_SELECTOR, "lib-open-orders input.ag-checkbox-input"
+            )
+            for box in header:
+                try:
+                    driver.execute_script("arguments[0].click();", box)
+                    time.sleep(0.2)
+                except Exception:
+                    pass
+            btns = driver.find_elements(
+                By.CSS_SELECTOR, "lib-open-orders button[ngbtooltip='حذف گروهی سفارشات']"
+            )
+            if not btns:
+                btns = driver.find_elements(
+                    By.XPATH, "//button[contains(@ngbtooltip,'حذف') or contains(., 'لغو')]"
+                )
+            for btn in btns:
+                try:
+                    if not btn.is_enabled():
+                        continue
+                    driver.execute_script("arguments[0].click();", btn)
+                    cancelled += 1
+                    time.sleep(0.6)
+                except Exception:
+                    logger.exception("cancel click failed")
+            for xpath in (
+                "//button[contains(., 'تأیید')]",
+                "//button[contains(., 'تایید')]",
+                "//button[contains(., 'بله')]",
+                "//button[contains(., 'حذف')]",
+            ):
+                for b in driver.find_elements(By.XPATH, xpath):
+                    try:
+                        if b.is_displayed():
+                            driver.execute_script("arguments[0].click();", b)
+                            time.sleep(0.5)
+                    except Exception:
+                        pass
+            logger.info("cancel_open_orders symbol=%s clicks=%s", symbol, cancelled)
+        except Exception:
+            logger.exception("cancel_open_orders failed")
+        return cancelled
+
     def place_limit(
         self,
         *,
@@ -671,11 +754,38 @@ class KaramadClient:
     ) -> tuple[str, Optional[str]]:
         self.ensure_dashboard()
         self.select_symbol(symbol)
-        limited = self.clamp_price(int(price))
+        high, low = self.read_threshold_prices()
+        if side == "sell":
+            limited = int(low)
+        elif side == "buy":
+            limited = int(high)
+        else:
+            limited = self.clamp_price(int(price))
+        logger.info(
+            "place_limit %s %s qty=%s ticket=%s quote=%s band=%s-%s",
+            side, symbol, quantity, limited, price, low, high,
+        )
         self.fill_order_panel(limited, int(quantity))
-        label = self.click_side(side, symbol, actually_click=actually_click)
+        word = "خرید" if side == "buy" else "فروش"
+        btn = wait_clickable(
+            self.driver,
+            (By.XPATH, f"//app-dashboard-common-order-panel//button[contains(., '{word}')]"),
+            timeout=10,
+        )
+        label = (btn.text or "").replace("\n", " ").strip()
+        if symbol not in label:
+            raise RuntimeError(f"button {label} is not {symbol}")
+        # Refill immediately before click; Angular resets ceiling/qty=1 during delays.
+        self.fill_order_panel(limited, int(quantity))
+        if not actually_click:
+            logger.info("DRY_RUN skip click %s", label)
+            return f"DRY_RUN:{label}", None
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block:'center'}); arguments[0].click();",
+            btn,
+        )
+        logger.info("clicked %s @ %s x%s", label, limited, quantity)
         notif = None
-        if actually_click:
-            time.sleep(3)
-            notif = self.read_notification()
+        time.sleep(3)
+        notif = self.read_notification()
         return label, notif

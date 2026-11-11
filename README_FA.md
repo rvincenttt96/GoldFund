@@ -164,7 +164,7 @@ python -m unittest tests.test_relative_value_engine -v
 Strategy A دیگر فقط Scaffold نیست. بخش‌های زیر پیاده‌سازی شده‌اند:
 
 - Bootstrap حساب فرضی با 1 میلیارد ریال و خرید اولیه عیار
-- شرط Rotation روی `net_executable_edge >= 0.50pp`
+- شرط Rotation روی `net_executable_edge >= 0.75pp`
 - فروش کل مبدأ روی Best Bid و خرید حداکثری مقصد روی Best Ask
 - کارمزد خرید و فروش واقعی Paper Account
 - حفظ یک `position_id` در تمام Rotationها
