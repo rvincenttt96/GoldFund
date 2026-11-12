@@ -56,7 +56,7 @@ PostgreSQL را داخل Docker بالا می‌آورد. دیتابیس اصل�
 Baseline تاریخی Relative Value، Anchor عیار و کارمزد خرید/فروش را نگه می‌دارد.
 
 ### `config/strategy_a.yaml`
-تنظیمات Strategy A: سرمایه اولیه، تک‌پوزیشن، حداقل Net Edge برابر 0.50pp و شیوه اجرا.
+تنظیمات Strategy A: سرمایه اولیه، تک‌پوزیشن، حداقل Net Edge برابر 0.75pp و شیوه اجرا.
 
 ### `config/strategy_b.yaml`
 تنظیمات Strategy B: سرمایه اولیه، ورود 10٪، Rearm 1.50pp، MA7، سقف 30٪ هر صندوق، سقف 100٪ طلا، آفران و Thresholdهای خرید/فروش.
@@ -150,7 +150,7 @@ Baseline تاریخی Relative Value، Anchor عیار و کارمزد خرید/
 قالب مشترک Strategyها.
 
 ### `app/strategies/strategy_a_relative_buy_hold.py`
-Signalهای Strategy A را تولید می‌کند. Strategy A همیشه یک پوزیشن دارد و اگر مقصدی حداقل 0.50pp Net Edge بهتر باشد Signal سوییچ می‌دهد.
+Signalهای Strategy A را تولید می‌کند. Strategy A همیشه یک پوزیشن دارد و اگر مقصدی حداقل 0.75pp Net Edge بهتر باشد Signal سوییچ می‌دهد.
 
 ### `app/strategies/strategy_b_entry_state.py`
 State Machine ورودهای Strategy B را نگه می‌دارد: Entry 1، Rearm 1.5pp، Entry 2/3/4 و MA7 fallback فقط برای Entry 2.

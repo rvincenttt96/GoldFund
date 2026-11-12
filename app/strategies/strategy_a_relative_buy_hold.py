@@ -68,7 +68,7 @@ class RelativeBuyHoldStrategy(StrategyBase):
 
     Important separation of concerns:
       * Shared Relative Value engine decides market-relative opportunity.
-      * Strategy A applies the policy threshold (default 0.50pp).
+      * Strategy A applies the policy threshold (default 0.75pp).
       * Executor performs the account-level sell/buy and persists state.
     """
 
@@ -76,7 +76,7 @@ class RelativeBuyHoldStrategy(StrategyBase):
 
     def __init__(
         self,
-        min_net_edge_pct_points: float | Decimal = Decimal("0.50"),
+        min_net_edge_pct_points: float | Decimal = Decimal("0.75"),
         *,
         anchor_symbol: str = "عیار",
     ):

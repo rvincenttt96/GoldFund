@@ -7,7 +7,7 @@
 - Exactly one logical open position
 - No threshold entry/exit, MA7, rearm, Afran, or 30% fund cap
 - Direct fund-to-fund rotations are allowed
-- Rotation trigger: shared Relative Value `net_executable_edge >= 0.50pp`
+- Rotation trigger: shared Relative Value `net_executable_edge >= 0.75pp`
 - Sell at source `best_bid`
 - Buy at target `best_ask`
 - Buy/sell fees are read from `config/relative_value.yaml`
@@ -25,14 +25,14 @@ ACCOUNT_INITIALIZATION_BUY
         v
 Position #1: Ayyar
         |
-        | net edge >= 0.50pp
+        | net edge >= 0.75pp
         v
 ROTATE Ayyar -> Fund B
         |
         v
 Position #1: Fund B
         |
-        | net edge >= 0.50pp
+        | net edge >= 0.75pp
         v
 ROTATE Fund B -> Fund C
 ```
